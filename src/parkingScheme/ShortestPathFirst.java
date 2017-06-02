@@ -30,6 +30,9 @@ public class ShortestPathFirst extends ParkingLotManager {
 	* @param parkingLot
 	* @param router 
 	*/
+	int b,k,m;
+	int inf=1000000000;
+	int p;
 	public ShortestPathFirst(Map parkingLot, Routing router) {
 		super(parkingLot, router);
 		// TODO Auto-generated constructor stub
@@ -60,35 +63,38 @@ public class ShortestPathFirst extends ParkingLotManager {
 				
 		//将当前距离最短的一个可行的车位调度出来
 		int fessibleSpace = -1;
-		for(int i = 0;i < parkingLot.allSpaces.size() && fessibleSpace == -1;i ++){
+		int cost=0,mini=inf;
+		int delay=0;
+		int choose=0;
+		for(int i = 0;i < parkingLot.allSpaces.size() ;i ++){
 			ParkingSpace space = parkingLot.allSpaces.get(i);
 			if(space.empty && space.firstPlanningEvent() == null)
 				//车位为空，且还没来得及安排车辆
-				fessibleSpace = i;
+				delay=0;
 			else if(!space.empty && space.firstPlanningEvent() != null){
 				//车位有车但马上就要出库了
 				Task pevent = space.firstPlanningEvent();
 				if(pevent.realStartTime < readyTime + router.hops(parkingLot.in, space.location))
 					//无需等待
-					fessibleSpace = i;
+					delay=0;
 				//否则再看看有其他的现成的空车位没有
+				else{
+					//要等一会儿
+					delay = 1  +   space.firstPlanningEvent().realStartTime- readyTime - router.hops(parkingLot.in, space.location) ;
+				}
+			}
+			else{
+				delay=inf;//有安排的车位，暂不考虑
+			}
+			int dis=space.key;
+			cost=b*delay+k*m*dis;
+			if(cost<mini){
+				mini=cost;
+				choose=i;
 			}
 		}
-		
-		if(fessibleSpace != -1)//找到了合适的车位
-			return new DispatchState(true,fessibleSpace,0);
-		
-		//看今后一段时间内是否有车位会空出，选出距离最短的
-		int delay = 0;
-		for(int i = 0;i < parkingLot.allSpaces.size() && fessibleSpace == -1;i ++){
-			ParkingSpace space = parkingLot.allSpaces.get(i);
-			if(!space.empty && space.firstPlanningEvent() != null){
-				//车位有车但马上就要出库了
-				fessibleSpace = i;
-				
-				//要等一会儿
-				delay = 1  +   space.firstPlanningEvent().realStartTime- readyTime - router.hops(parkingLot.in, space.location) ;
-			}			
+		if(mini<p){
+			fessibleSpace=choose;
 		}
 		
 		if(fessibleSpace != -1){
