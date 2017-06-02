@@ -39,6 +39,8 @@ public class Initiation {
 	public VRP[] applications;	//VRP
 	public Point inner;
 	public Point outer;
+	
+	public int[][] routingIn,routingOut;
 	/**
 	 * <p>
 	 * Title:
@@ -170,6 +172,9 @@ public class Initiation {
 			System.out.println();
 		}
 		yy = StaticRouting.routing(outer);
+		
+		routingIn = xx;
+		routingOut = yy;
 		return true;
 	}
 }
