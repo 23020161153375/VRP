@@ -22,7 +22,7 @@ import routing.Routing;
 * @author FlyingFish
 * @date 2017-05-18
 */
-public class ShortestPathFirst extends ParkingLotManager {
+public class DispatcherII extends ParkingLotManager {
 
 	/** 
 	* <p>Title: </p> 

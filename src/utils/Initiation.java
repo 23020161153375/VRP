@@ -1,10 +1,10 @@
-/**   
- * @Title: Initiation.java 
- * @Package  
- * @Description: TODO(用一句话描述该文件做什么) 
+/**
+ * @Title: Initiation.java
+ * @Package
+ * @Description: TODO(用一句话描述该文件做什么)
  * @author FlyingFish
  * @date 2017-05-17
- * @version V1.0   
+ * @version V1.0
  */
 package utils;
 import java.util.Scanner;
@@ -20,7 +20,7 @@ import routing.StaticRouting;
  * <p>
  * Description:
  * </p>
- * 
+ *
  * @author FlyingFish
  * @date 2017-05-17
  */
@@ -39,7 +39,7 @@ public class Initiation {
 	public VRP[] applications;	//VRP
 	public Point inner;
 	public Point outer;
-	
+
 	public int[][] routingIn,routingOut;
 	/**
 	 * <p>
@@ -48,7 +48,7 @@ public class Initiation {
 	 * <p>
 	 * Description:
 	 * </p>
-	 * 
+	 *
 	 * @param args
 	 */
 	public static void main(String[] args) {
@@ -171,8 +171,9 @@ public class Initiation {
 			}
 			System.out.println();
 		}
+		StaticRouting.init(map);//一定要恢复图
 		yy = StaticRouting.routing(outer);
-		
+
 		routingIn = xx;
 		routingOut = yy;
 		return true;

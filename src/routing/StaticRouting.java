@@ -45,7 +45,7 @@ public class StaticRouting {
     
     public static void init(int[][] parkingLot){
     	n = parkingLot.length;
-    	m = parkingLot.length;
+    	m = parkingLot[0].length;
     	for(int r = 0;r <n;r ++)
     		for(int c = 0;c < m;c++){
     			if(parkingLot[r][c] == Map.X || parkingLot[r][c] == Map.E || parkingLot[r][c] == Map.I)
@@ -63,7 +63,7 @@ public class StaticRouting {
 
     public static int[][] routing(Point start){
          
-        maze[0][0] = -1;
+        maze[start.x][start.y] = -1;
         q.add(new ElemType(start,0));
          
         while(!q.isEmpty()){
@@ -83,7 +83,7 @@ public class StaticRouting {
         int[][] routingTable = new int[n][m];
         for(int r = 0;r < n;r ++)
         	for(int c = 0;c < m;c ++)
-        		routingTable[r][c] = direction[n][m];
+        		routingTable[r][c] = direction[r][c];
         
         return routingTable;
     }

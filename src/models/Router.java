@@ -59,9 +59,13 @@ public class Router implements Routing {
 				endE = parkingLot.search(end) == Map.E,
 				endP = parkingLot.search(end) >= 0;
 				
-		if((startI && endE) || (startE && endI)){//从起点到终点的路径
+		if(startI && endE){//从起点到终点的路径
 			return StaticRouting.getHops(start.x, start.y, end.x, end.y, routingI);
-		}else if(startI && endP){
+		}
+		else if(startE && endI){
+			return StaticRouting.getHops(end.x, end.y, start.x, start.y, routingI);
+		}
+			else if(startI && endP){
 			Point endPInlet = parkingLot.allSpaces.get(parkingLot.search(end)).inlet;
 			return StaticRouting.getHops( start.x, start.y,endPInlet.x,endPInlet.y, routingI) + 1;
 		}else if(startP && endI){
