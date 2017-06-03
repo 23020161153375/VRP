@@ -76,4 +76,14 @@ public abstract class RobotsControlCenter implements Scheduling {
 		robot.location = task.taskType == Task.PULL_IN ?
 				map.allSpaces.get(task.parkingSpaceID).location: map.out;
 	}
+	
+	
+	/** 
+	* <p>Title: </p> 
+	* <p>Description: </p> 
+	* @return 
+	*/
+	public int calcW(){
+		return 0;
+	}
 }

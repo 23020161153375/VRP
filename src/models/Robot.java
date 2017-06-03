@@ -21,7 +21,7 @@ public class Robot  implements Comparable<Robot>, HeapElement<Integer>{
 	public int robotID;
 	
 	public int completementTime;
-	 public Point location;
+	public Point location;
 	 
 	 public Robot(int id,Point in){
 		 robotID = id;
@@ -39,6 +39,7 @@ public class Robot  implements Comparable<Robot>, HeapElement<Integer>{
 		// TODO Auto-generated method stub
 		loc = location;
 	}
+	
 	/** (non-Javadoc)
 	 * @see dataStructure.other.HeapElement#getElementLocation()
 	 */

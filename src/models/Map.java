@@ -9,6 +9,7 @@
 package models;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -60,6 +61,7 @@ public class Map{
 	
 	public Map(int[][] map,int[][] routingI,int[][] routingE){
 		this.map = map;
+		allSpaces=new ArrayList<ParkingSpace>();
 		init();
 		orderParkingSpace(routingI,routingE);
 	}
@@ -87,7 +89,9 @@ public class Map{
 					map[i][j] = countPS;
 					Point ps = new Point(i,j);
 					Point inlet = getInletOfParkingSpace(ps);
-					allSpaces.add(new ParkingSpace(countPS++,ps,inlet));
+					ParkingSpace test=new ParkingSpace(countPS,ps,inlet);
+					allSpaces.add(test);
+					countPS++;
 				}else if(map[i][j] == Map.E)
 					//注意X轴Y轴的方向
 					out = new Point(i,j);
@@ -98,12 +102,14 @@ public class Map{
 	
 	//找某个停车位的入口
 	private Point getInletOfParkingSpace(Point psLoc){
+		int n = map.length;
+		int m = map[0].length;
 		int xOffset = 0,yOffset = 0;
-		if(map[psLoc.x +1][psLoc.y] == Map.X)
+		if(psLoc.x+1<n&&map[psLoc.x +1][psLoc.y] == Map.X)
 			xOffset = 1;
-		else if(map[psLoc.x][psLoc.y + 1] == Map.X)
+		else if(psLoc.y+1<m&&map[psLoc.x][psLoc.y + 1] == Map.X)
 			yOffset = 1;
-		else if(map[psLoc.x - 1][psLoc.y] == Map.X)
+		else if(psLoc.x>0&&map[psLoc.x - 1][psLoc.y] == Map.X)
 			xOffset = -1;
 		else 
 			yOffset = -1;
@@ -127,5 +133,17 @@ public class Map{
 			space.id = i;
 			map[space.location.x][space.location.y] = i;
 		}		
+	}
+	
+	/** 
+	* <p>打印地图 </p> 
+	* <p>Description: </p>  
+	*/
+	public void print(){
+		for(int i = 0;i < map.length;i ++){
+			for(int j = 0;j < map[0].length;j ++)
+				System.out.printf("%3d", map[i][j]);
+			System.out.println();
+		}
 	}
 }

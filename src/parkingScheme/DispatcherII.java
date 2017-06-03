@@ -33,28 +33,17 @@ public class DispatcherII extends ParkingLotManager {
 	int b,k,m;
 	int inf=1000000000;
 	int p;
-	public ShortestPathFirst(Map parkingLot, Routing router) {
+	public DispatcherII(Map parkingLot, Routing router) {
 		super(parkingLot, router);
 		// TODO Auto-generated constructor stub
 	}
 
 
 	/** (non-Javadoc)
-	 * @see parkingScheme.SpaceDispatcher#restore(int)
-	 */
-	@Override
-	public boolean restore(int restoreTime) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-
-	/** (non-Javadoc)
-	 * @see parkingScheme.SpaceDispatcher#parkingSpaceDispatch(models.VRP[], int)
+	 * @see parkingScheme.SpaceDispatcher#parkingSpaceDispatch(models.VRP[], int, int)
 	 */
 	@Override
 	public DispatchState parkingSpaceDispatch(VRP[] vrps, int id, int readyTime) {
-		// TODO Auto-generated method stub
 		if(readyTime < this.time)
 			//修改成逆时针调整，以用于优化中
 			throw new IllegalStateException("先申请入库的先处理。");

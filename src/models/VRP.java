@@ -51,10 +51,10 @@ public class VRP {
 	/** 
 	* @Fields refused : TODO(是否据载) 
 	*/ 
-	private boolean refused;
+	public boolean refused;
 	
 	//每个接受的申请对应了入库(task1)、和出库任务(task2)
-	private Task task1,task2;
+	public Task task1,task2;
 	
 	/** 
 	* <p>Title: </p> 

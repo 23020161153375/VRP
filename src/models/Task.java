@@ -33,8 +33,6 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 	public int carID;
 	
 	/*任务正常开始的时间
-	/*对于出库任务，开始时间可以有不同理解，
-	 * 其中一种是从入口出发的时间（然后去接车再送出库），
 	 * 这里用Comparator会更好。 */
 	public int startTime;
 	
@@ -111,14 +109,19 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 		return loc;
 	}
 
-
+	private int startTimeFromEntrance;
+	
+	public int startTimeFromEntrance(){
+		return this.startTimeFromEntrance;
+	}
+	
 	/** (non-Javadoc)
 	 * @see dataStructure.other.HeapElement#updateKey(java.lang.Object)
 	 */
 	@Override
 	public void updateKey(Integer key) {
 		// TODO Auto-generated method stub
-		this.startTime = key;
+		this.startTimeFromEntrance = key;
 	}
 
 	/**以正常开始时间来比较
@@ -127,7 +130,7 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 	@Override
 	public int compareTo(Task o) {
 		// TODO Auto-generated method stub
-		return this.startTime - o.startTime;
+		return this.startTimeFromEntrance - o.startTimeFromEntrance;
 	}
 	
 }

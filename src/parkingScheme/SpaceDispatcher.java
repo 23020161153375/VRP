@@ -20,7 +20,20 @@ import models.VRP;
 */
 public interface SpaceDispatcher {
 	
-	boolean restore(int restoreTime);
+	
+	/** 
+	* <p>通知停车场方面入库/出库事件 </p> 
+	* <p>Description: </p> 
+	* @param task 
+	*/
+	void event(Task task);
+	
+	/** 
+	* <p>使停车位回到当初某个时间的状态 </p> 
+	* <p>Description: </p> 
+	* @param restoreTime
+	*/
+	void restore(int restoreTime);
 	
 	/** 
 	* <p>车位调度 </p>  

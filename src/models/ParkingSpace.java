@@ -8,6 +8,7 @@
 */
 package models;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,38 +26,44 @@ public class ParkingSpace implements Comparable<ParkingSpace>,HeapElement<Intege
 	public int id;
 	public Point location;
 	public Point inlet;
-	//public  List<List<Point>> routings;
 	
 	public ParkingSpace(int id, Point location,Point inlet){
 		this.id = id;
 		this.location = location;
 		this.inlet = inlet;
 
-		//key = routing2I.size() + routing2E.size();
 		empty = true;
-		eventsOn = new LinkedList<Task>();
+		
+		//所有发生过的事件（改成数组形式）
+		eventsOn = new ArrayList<Task>();
+		
+		lastEventIndex = -1;
 	}
 	
 
 	public boolean empty;
-	// Task lastEvent;
+
+	//最后一次发生的事件
+	public int lastEventIndex;
+	
+	//所有的事件
 	public List<Task> eventsOn;
 		 
 	public Task lastEvent(){
-		if(eventsOn.size() == 0)
+		if(lastEventIndex == -1)
 			return null;
 		else
-			return eventsOn.get(0);
+			return eventsOn.get(lastEventIndex);
 	}
 	
 	public Task firstPlanningEvent(){
-		if(eventsOn.size() < 2)
+		if(lastEventIndex + 1 >= eventsOn.size())
 			return null;
 		else
-			return eventsOn.get(1);
+			return eventsOn.get(lastEventIndex + 1);		
 	}
 	
-	private int key;
+	public int key;
 	/** (non-Javadoc)
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */

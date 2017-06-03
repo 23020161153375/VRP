@@ -8,6 +8,8 @@
 */
 package schedulingScheme;
 
+import models.VRP;
+
 /**
 * <p> 机器人调度</p>
 * <p>Description: </p>
@@ -23,4 +25,5 @@ public interface Scheduling {
 	* @return 等待代价与拒载代价之和
 	*/
 	int scheduling(int nRobots);
+	
 }
