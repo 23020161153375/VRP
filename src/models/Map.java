@@ -14,7 +14,8 @@ import java.util.Collections;
 import java.util.List;
 
 import routing.StaticRouting;
-
+import models.Router;
+import utils.Initiation;
 
 
 /**
@@ -72,6 +73,8 @@ public class Map{
 	* @param p
 	* @return 
 	*/
+
+
 	public int search(Point p){
 		return map[p.x][p.y];
 	}
@@ -122,8 +125,9 @@ public class Map{
 		for(int i = 0;i < allSpaces.size();i ++){
 			ParkingSpace ps = allSpaces.get(i);
 			allSpaces.get(i).updateKey(
-					StaticRouting.getHops(in.x, in.y, ps.location.x, ps.location.y, routingI)
-					+ StaticRouting.getHops(out.x,out.y,ps.location.x,ps.location.y,routingE));
+					StaticRouting.getHops(in.x, in.y, ps.inlet.x, ps.inlet.y, routingI)
+					+ StaticRouting.getHops(out.x,out.y,ps.inlet.x,ps.inlet.y,routingE)+2);
+
 		}
 		
 		//Í£³µÎ»ÅÅÐò
