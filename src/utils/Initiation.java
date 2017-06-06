@@ -121,7 +121,8 @@ public class Initiation {
 			int temp3 = cin.nextInt();
 			int temp4 = cin.nextInt();
 			int temp5 = cin.nextInt();
-			applications[i] = new VRP(temp1, temp2, temp3, temp4, temp5);
+			
+			applications[i] = new VRP(temp1 - 1, temp2, temp3, temp4, temp5);
 		}
 		if (!isMapValid()) {	//地图无效
 			System.out.println("无效的地图!");

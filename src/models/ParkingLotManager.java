@@ -31,18 +31,18 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 		this.parkingLot = parkingLot;
 		this.router = router;
 		
-		emptySpaces = new HeapMin<ParkingSpace,Integer>(parkingLot.allSpaces);
+		//emptySpaces = new HeapMin<ParkingSpace,Integer>(parkingLot.allSpaces);
 		time = 0;
 	}
 	
 	protected int time;
 	
-	protected HeapMin<ParkingSpace,Integer> emptySpaces;
+	//protected HeapMin<ParkingSpace,Integer> emptySpaces;
 	
 	public void event(Task task){	
 		parkingLot.allSpaces.get(task.parkingSpaceID).eventsOn.add(task);
 	}
-		
+	/*	
 	protected ParkingSpace removeAEmptySpace(int spaceID){
 		int locInHeap = parkingLot.allSpaces.get(spaceID).getElementLocation();
 		emptySpaces.decreaseKey(locInHeap, -1);
@@ -53,7 +53,7 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	//			+ removedSpace.routings.get(1).size());
 		
 		return removedSpace;
-	}
+	}*/
 	
 	protected void stateChangeClockwise(int time){
 		if(time <= this.time)
@@ -76,10 +76,10 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 			}
 			if(j != parkingLot.allSpaces.get(i).lastEventIndex){//j代表这段时间内（即(this.time,time]）会对所在车位发生影响的最后一项事件（不一定完成）
 				if(events.get(j).taskType == Task.PULL_IN && parkingLot.allSpaces.get(i).empty){
-					removeAEmptySpace(i);
+					//removeAEmptySpace(i);
 					parkingLot.allSpaces.get(i).empty = false;
-				}else if(events.get(i).taskType == Task.PULL_OUT && !parkingLot.allSpaces.get(i).empty){
-					emptySpaces.add(parkingLot.allSpaces.get(i));
+				}else if(events.get(j).taskType == Task.PULL_OUT && !parkingLot.allSpaces.get(i).empty){
+					//emptySpaces.add(parkingLot.allSpaces.get(i));
 					parkingLot.allSpaces.get(i).empty = true;
 				}
 				
@@ -98,15 +98,16 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	* <p>打印停车场状态 </p> 
 	* <p>调试用</p>  
 	*/
-	private void printCurrentStateOfParkingLot(){
+	protected void printCurrentStateOfParkingLot(){
 		System.out.println("当前时间：" + time+"分配前停车位状态（Empty/Busy）");
 		for(int i = 0;i < parkingLot.allSpaces.size();i ++){
 			System.out.printf("%3d",i);			
 		}
 		System.out.println();
 		for(int i = 0;i < parkingLot.allSpaces.size();i ++){
-			System.out.printf("%3d",parkingLot.allSpaces.get(i).empty ? 'E':'B');			
+			System.out.printf("%3c",parkingLot.allSpaces.get(i).empty ? 'E':'B');			
 		}
+		System.out.println();
 	}
 	
 	/** (non-Javadoc)
@@ -115,7 +116,8 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	@Override
 	public void restore(int restoreTime) {
 		// TODO Auto-generated method stub
-		stateChangeAnticlockwise(restoreTime);
+		if(restoreTime != time)
+			stateChangeAnticlockwise(restoreTime);
 		
 		//调试用
 		printCurrentStateOfParkingLot();
@@ -123,36 +125,42 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	
 	protected void stateChangeAnticlockwise(int time){
 		if(time >= this.time)
-			throw new IllegalStateException(time +" > " + this.time+"(系统时间)，只能选择当初的某个时间点");
+			throw new IllegalStateException(time +" >= " + this.time+"(系统时间)，只能选择当初的某个时间点");
 		
 		int nSpaces = parkingLot.allSpaces.size();
 
 		for(int i = 0;i < nSpaces;i ++){
 			List<Task> events = parkingLot.allSpaces.get(i).eventsOn;
-			int j = parkingLot.allSpaces.get(i).lastEventIndex;
-			while(j - 1 > 0){
-				Task event = events.get(j - 1);
-				if(event.taskType == Task.PULL_IN && event.realFinishTime <= time)
+			int lastEventIndex= parkingLot.allSpaces.get(i).lastEventIndex;
+			int j = lastEventIndex;
+			while(j >= 0){
+				Task event = events.get(j);
+				if(event.taskType == Task.PULL_IN && event.realFinishTime > time)
+					//入库事件j完成
 					j --;
-				else if(event.taskType == Task.PULL_OUT && event.realStartTime < time)
-					//对于出库情形，确保在给定时刻车位已空出来了
-					j --;				
+				else if(event.taskType == Task.PULL_OUT && event.realStartTime >= time)
+					//车辆未离开车位
+					j --;
+				else
+					break;
 			}
-			if(j != parkingLot.allSpaces.get(i).lastEventIndex){//j代表这段时间内（即(this.time,time]）会对所在车位发生影响的最后一项事件（不一定完成）
-				if(events.get(j).taskType == Task.PULL_IN && parkingLot.allSpaces.get(i).empty){
-					removeAEmptySpace(i);
+			if(j != -1){//j代表在(0,time]时间内会对所在车位发生影响的最后一项事件（不一定完成）
+				if(events.get(j).taskType == Task.PULL_IN){
+					//removeAEmptySpace(i);
 					parkingLot.allSpaces.get(i).empty = false;
-				}else if(events.get(i).taskType == Task.PULL_OUT && !parkingLot.allSpaces.get(i).empty){
-					emptySpaces.add(parkingLot.allSpaces.get(i));
+				}else if(events.get(j).taskType == Task.PULL_OUT ){
+					//emptySpaces.add(parkingLot.allSpaces.get(i));
 					parkingLot.allSpaces.get(i).empty = true;
 				}
-				
-				parkingLot.allSpaces.get(i).lastEventIndex = j;
-				
-				//释放最后一个完成事件后面的所有事件
-				while(events.size() > j+1)
-					events.remove(events.size() - 1);
-			}						
+			}else
+				//在这个位置上什么事也没发生
+				parkingLot.allSpaces.get(i).empty = true;
+			
+			parkingLot.allSpaces.get(i).lastEventIndex = j;
+			
+			//释放最后一个完成事件后面的所有事件
+			while(events.size() > j+1)
+				events.remove(events.size() - 1);
 		}
 		//记录当前系统时间
 		this.time = time;	

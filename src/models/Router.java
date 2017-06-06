@@ -61,11 +61,9 @@ public class Router implements Routing {
 				
 		if(startI && endE){//从起点到终点的路径
 			return StaticRouting.getHops(start.x, start.y, end.x, end.y, routingI);
-		}
-		else if(startE && endI){
+		}else if(startE && endI){
 			return StaticRouting.getHops(end.x, end.y, start.x, start.y, routingI);
-		}
-			else if(startI && endP){
+		}else if(startI && endP){
 			Point endPInlet = parkingLot.allSpaces.get(parkingLot.search(end)).inlet;
 			return StaticRouting.getHops( start.x, start.y,endPInlet.x,endPInlet.y, routingI) + 1;
 		}else if(startP && endI){

@@ -40,14 +40,18 @@ public class TDispactherII {
 		//创建地图
 		Map map = new Map(data.map, data.routingIn, data.routingOut);
 		
+		//打印地图
+		map.print();
+		
 		//利用地图创建一个路由器
 		Router router = new Router(map, data.routingIn, data.routingOut);
 
 		//使用2号停车位调度方案（换了这个名字）
-		SpaceDispatcher parkingLotDispatcher = new DispatcherII(map,router);
+		SpaceDispatcher parkingLotDispatcher 
+			= new DispatcherII(map,router, data.fWaiting, data.fPanishment, data.fEnergy);
 		
-		
-		Task firstPullIn = null,firstPullOut;
+		System.out.println("***执行任务***");		
+		Task firstPullIn = null,pullIn = null,firstPullOut;
 		for(int i = 0;i < data.applications.length ;i ++){
 			//最后一个入库任务留了出来
 			//假装每个入库任务都有机器人按时发送
@@ -55,26 +59,33 @@ public class TDispactherII {
 			int readyTime = data.applications[i].requestTime;
 			DispatchState ds = parkingLotDispatcher.parkingSpaceDispatch(data.applications, i, readyTime);
 			
-			System.out.println("\n申请车辆"+i+"的申请时间为"+readyTime+"分配结果：" );
-			if(ds.success)
+			System.out.println("申请车辆"+i+"的申请时间为"+readyTime+"分配结果：" );
+			if(ds.success){
 				System.out.println("分配成功，车位是" + ds.parkingSpaceID +"延时为" + ds.delay );
-			else
+				pullIn = new Task(i, data.applications[i].requestTime, Task.PULL_IN, ds.parkingSpaceID);
+				pullIn.realStartTime = readyTime + ds.delay;
+				pullIn.realFinishTime =  pullIn.realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
+				parkingLotDispatcher.event(pullIn);
+			}else
 				System.out.println("分配失败");
+			System.out.println();
 			
-			Task pullIn = new Task(i, data.applications[i].requestTime, Task.PULL_IN, ds.parkingSpaceID);
-			pullIn.realStartTime = readyTime + ds.delay;
-			pullIn.realFinishTime =  pullIn.realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
-			parkingLotDispatcher.event(pullIn);
 			
 			
 			//找一个申请数大于车位数的图，下面的测试才有意义
 			if(i == 0)
 				firstPullIn = pullIn;
-			else if(i == data.applications.length - 1){
+			else if(i == data.applications.length - 2){
 				//在执行最后一辆入库任务前，将第一辆入库的车出库
-				int startTime = data.applications[firstPullIn.carID].pullOutTime - router.hops(map.out, map.allSpaces.get(firstPullIn.parkingSpaceID).location);
+				int startTime = data.applications[i].requestTime;
 				firstPullOut = new Task(firstPullIn.carID,startTime,Task.PULL_OUT,firstPullIn.parkingSpaceID);
+				firstPullOut.realStartTime = startTime;
+				firstPullOut.realFinishTime 
+					= firstPullOut.realStartTime 
+						+ router.hops(map.allSpaces.get(firstPullOut.parkingSpaceID).location, map.out);
 				parkingLotDispatcher.event(firstPullOut);
+				
+				System.out.println("申请车辆"+firstPullOut.carID +"离开车位"+firstPullOut.parkingSpaceID+"时间为"+firstPullOut.realStartTime+"\n");
 			}				
 		}					
 		

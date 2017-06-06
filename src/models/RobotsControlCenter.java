@@ -49,12 +49,24 @@ public abstract class RobotsControlCenter implements Scheduling {
 		applications = appls;
 	}
 	
+	/** 
+	* @Fields pullInTasks : TODO(入库任务队列，一开始就决定好了) 
+	*/ 
 	protected List<Task> pullInTasks;
+	
+	/** 
+	* @Fields pullOutTasks : TODO(出库任务队列，动态生成) 
+	*/ 
 	protected HeapMin<Task,Integer> pullOutTasks;
 	
 	protected HeapMin<Robot,Integer> robots;
 	//protected int time;
 	
+	/** 
+	* <p>初始化机器人</p> 
+	* <p>Description: </p> 
+	* @param n 机器人数目
+	*/
 	protected void createRobotsSet(int n){
 		List<Robot> robots = new ArrayList<Robot>();
 		for(int  i = 0; i < n;i ++)
@@ -62,6 +74,10 @@ public abstract class RobotsControlCenter implements Scheduling {
 		this.robots = new HeapMin<Robot,Integer>(robots);
 	}
 	
+	/** 
+	* <p>初始化任务列表</p> 
+	* <p>添加所有入库任务到待办列表 </p>  
+	*/
 	protected void createTaskList(){
 		pullInTasks = new LinkedList<Task>();
 		pullOutTasks = new HeapMin<Task,Integer>();
@@ -70,20 +86,11 @@ public abstract class RobotsControlCenter implements Scheduling {
 			pullInTasks.add(pullIn);
 		}
 	}
-	
+	/*
 	protected void completeTask(Robot robot,Task task){
 		robot.completementTime = task.realFinishTime;
 		robot.location = task.taskType == Task.PULL_IN ?
 				map.allSpaces.get(task.parkingSpaceID).location: map.out;
-	}
+	}*/
 	
-	
-	/** 
-	* <p>Title: </p> 
-	* <p>Description: </p> 
-	* @return 
-	*/
-	public int calcW(){
-		return 0;
-	}
 }

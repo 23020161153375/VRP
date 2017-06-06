@@ -23,7 +23,13 @@ public class Robot  implements Comparable<Robot>, HeapElement<Integer>{
 	public int completementTime;
 	public Point location;
 	 
-	 public Robot(int id,Point in){
+	 /** 
+	* <p>构造函数，创建一个机器人 </p> 
+	* <p>Description: </p> 
+	* @param id 编号
+	* @param in 初始位置
+	*/
+	public Robot(int id,Point in){
 		 robotID = id;
 		 completementTime = 0;
 		 location = in;

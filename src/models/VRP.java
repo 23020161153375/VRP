@@ -34,7 +34,7 @@ public class VRP {
 	/** 
 	* <p>构造函数 </p> 
 	* <p>Description: </p> 
-	* @param id
+	* @param id 注意，为方便使用，在内部车辆编号从0开始
 	* @param rt
 	* @param lwt
 	* @param pot

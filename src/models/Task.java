@@ -25,10 +25,10 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 	public static final int PULL_OUT = 1;
 	
 	//从出口返回入口，机器人附加任务
-	public static final int E_RETURN = 2;
+	//public static final int E_RETURN = 2;
 	
 	//从车位返回入口，机器人附加任务
-	public static final int PS_RETURN = 3;
+	//public static final int PS_RETURN = 3;
 	
 	public int carID;
 	
@@ -69,6 +69,12 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 	 //实际任务完成时间
 	 public int realFinishTime;
 	 
+/*	 public String toString(){
+		 if(taskType == Task.PULL_IN)
+		 return null;
+	 }*/
+	 
+	 /*
 	public static int realFinishTime(Task task,Routing router,Map map){
 		Point start ,end;
 		if(task.taskType == Task.PULL_IN) { 
@@ -86,7 +92,7 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 		}
 		
 		return task.realStartTime + router.hops(start, end);
-	}
+	}*/
 
 	/*下面实现两个接口*/
 	

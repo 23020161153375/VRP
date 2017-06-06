@@ -30,12 +30,15 @@ public class DispatcherII extends ParkingLotManager {
 	* @param parkingLot
 	* @param router 
 	*/
-	int b=5,k=1,m=10;
+	int b=5,k=1;
 	int inf=1000000000;
 	int p=inf;
-	public DispatcherII(Map parkingLot, Routing router) {
+	public DispatcherII(Map parkingLot, Routing router,int fWating,int fPanishment, int fEnergy) {
 		super(parkingLot, router);
 		// TODO Auto-generated constructor stub
+		b = fWating;
+		p = fPanishment;
+		k = fEnergy;
 	}
 
 
@@ -45,26 +48,31 @@ public class DispatcherII extends ParkingLotManager {
 	@Override
 	public DispatchState parkingSpaceDispatch(VRP[] vrps, int id, int readyTime) {
 		if(readyTime < this.time)
-			//修改成逆时针调整，以用于优化中
 			throw new IllegalStateException("先申请入库的先处理。");
-		else if(readyTime >= this.time)//时钟调整
+		else if(readyTime > this.time)//时钟调整
 			stateChangeClockwise(readyTime);
-				
+		else
+			this.printCurrentStateOfParkingLot();
+		
 		//将当前距离最短的一个可行的车位调度出来
-		int fessibleSpace = -1;
+		//int fessibleSpace = -1;
+		
+		//用于筛选
 		int cost=0,mini=inf;
 		int delay=0;
+		
+		//结果
 		int choose=0;
+		int chooseDelay = -1;
 		for(int i = 0;i < parkingLot.allSpaces.size() ;i ++){
 			ParkingSpace space = parkingLot.allSpaces.get(i);
 			if(space.empty && space.firstPlanningEvent() == null) {
 				//车位为空，且还没来得及安排车辆
 				delay = 0;
-			}
-			else if(!space.empty){
+			}else if(!space.empty){
 				//车位有车但马上就要出库了
 				Task pevent=null;
-				if(space.firstPlanningEvent() != null) {//出库事件什么时候添加的？
+				if(space.firstPlanningEvent() != null) {//出库事件什么时候添加的？（在这次申请之前）
 					pevent = space.firstPlanningEvent();
 					if (pevent.realStartTime < readyTime + router.hops(parkingLot.in, space.location))
 						//无需等待
@@ -83,25 +91,30 @@ public class DispatcherII extends ParkingLotManager {
 				//有安排的车位，暂不考虑
 				delay=inf;
 			}
-		//	int dis=space.key;
-			int dis=router.hops(parkingLot.in, space.location)+router.hops(parkingLot.out, space.location);
 
+			int dis=router.hops(parkingLot.in, space.location)+router.hops(parkingLot.out, space.location);
+			
+			int m = vrps[id].carMass;
 			cost=b*delay+k*m*dis;
 			if(cost<mini){
 				mini=cost;
 				choose=i;
+				
+				//保存时延
+				chooseDelay = delay;
 			}
 		}
-		if(mini<p){
+		//并不是划得来才入库，是有空闲必须入库
+		/*if(mini<inf){
 			fessibleSpace=choose;
-		}
+		}*/
 		/*System.out.println("分配车位"+fessibleSpace);
 		System.out.println("车位编号"+fessibleSpace);
 		System.out.println("车位坐标"+parkingLot.allSpaces.get(fessibleSpace).location.x+" "+parkingLot.allSpaces.get(fessibleSpace).location.y);
 		System.out.println("距离"+parkingLot.allSpaces.get(fessibleSpace).key);*/
 		
-		if(fessibleSpace != -1){
-			return new DispatchState(true,fessibleSpace,delay);
+		if(mini < inf){
+			return new DispatchState(true,choose,chooseDelay);
 		}
 		
 		//无车位可供调度（需要先出库才行）

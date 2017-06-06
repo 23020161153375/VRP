@@ -14,8 +14,6 @@ import java.util.Collections;
 import java.util.List;
 
 import routing.StaticRouting;
-import models.Router;
-import utils.Initiation;
 
 
 /**
@@ -73,8 +71,6 @@ public class Map{
 	* @param p
 	* @return 
 	*/
-
-
 	public int search(Point p){
 		return map[p.x][p.y];
 	}
@@ -144,6 +140,9 @@ public class Map{
 	* <p>Description: </p>  
 	*/
 	public void print(){
+		System.out.println("***´òÓ¡µØÍ¼***"
+				+"\nP(>=0) "+"B(" + Map.B+") X("+Map.X+") E("+Map.E +") I("+Map.I+")");
+
 		for(int i = 0;i < map.length;i ++){
 			for(int j = 0;j < map[0].length;j ++)
 				System.out.printf("%3d", map[i][j]);

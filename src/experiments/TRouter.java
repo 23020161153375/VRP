@@ -6,7 +6,7 @@
 * @date 2017-06-02
 * @version V1.0   
 */
-package experiments.routing;
+package experiments;
 
 import models.Map;
 import models.Router;
