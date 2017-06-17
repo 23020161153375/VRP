@@ -7,11 +7,15 @@
  * @version V1.0
  */
 package utils;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Scanner;
 
 import models.Map;
-import models.VRP;
 import models.Point;
+import models.VRP;
 import routing.StaticRouting;
 /**
  * <p>
@@ -55,19 +59,19 @@ public class Initiation {
 		// TODO Auto-generated method stub
 
 		Initiation init = new Initiation();
-		init.init();
+		Scanner cin = new Scanner(System.in);
+		init.init(cin);
 
 	}
 
-	public void init() {
+	public void init(Scanner cin) {
 
 		// String fileInPath = "h:/fileRead.txt";
 		// File f = new File(fileInPath);
 		// Scanner cin = new Scanner(new FileInputStream(f));
 
 		// 去掉前面的文件流 把cin改成控制台输入
-		Scanner cin = new Scanner(System.in);
-
+		
 		fEnergy = cin.nextInt(); // 能耗系数
 		fPanishment = cin.nextInt(); // 罚时系数
 		fRobots = cin.nextInt(); // 机器人系数
@@ -126,17 +130,9 @@ public class Initiation {
 		}
 		if (!isMapValid()) {	//地图无效
 			System.out.println("无效的地图!");
+			System.exit(0);
 		}
-		// String fileOutPath = "h:/fileOut.txt";
-		// File systemOut = new File(fileOutPath);
-		// systemOut.createNewFile();
-		// FileOutputStream fileOutputStream = new FileOutputStream(systemOut);
-		// PrintStream printStream = new PrintStream(fileOutputStream);
-		//
-		// System.setOut(printStream);
-
-		// 去掉对system设置输出流，采用默认的控制台输出，
-
+		System.out.println("初始化成功");
 	}
 
 	public boolean isMapValid() {
@@ -163,20 +159,30 @@ public class Initiation {
 			//System.out.println();
 		}
 		StaticRouting.init(map);
-		int [][] xx,yy;
-		xx = StaticRouting.routing(inner);
+		routingIn = StaticRouting.routing(inner);
 		System.out.println(inner.getX()+" "+inner.getY());
 		for(int i = 0;i < high;i++){
 			for(int j = 0;j < width;j++){
-				System.out.print(xx[i][j]+" ");
+				if(map[i][j] == Map.P){
+					int judge = 0;
+					if(i < high - 1 && routingIn[i+1][j] != 0)
+						judge++;
+					if(i > 0 && routingIn[i-1][j] != 0)
+						judge++;
+					if(j < width - 1 && routingIn[i][j+1] != 0)
+						judge++;
+					if(j > 0 && routingIn[i][j-1] != 0)
+						judge++;
+					if(judge != 1){
+						System.out.println("有P不可达");
+						return false;
+					}
+				}
 			}
-			System.out.println();
 		}
+		System.out.println("地图不存在问题");
 		StaticRouting.init(map);//一定要恢复图
-		yy = StaticRouting.routing(outer);
-
-		routingIn = xx;
-		routingOut = yy;
+		routingOut = StaticRouting.routing(outer);
 		return true;
 	}
 }

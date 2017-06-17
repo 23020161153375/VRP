@@ -28,12 +28,14 @@ public interface SpaceDispatcher {
 	*/
 	void event(Task task);
 	
+
 	/** 
-	* <p>使停车位回到当初某个时间的状态 </p> 
+	* <p>使停车位回到当初某个状态</p> 
 	* <p>Description: </p> 
-	* @param restoreTime
+	* @param restoreTime 当时的系统时间
+	* @param deprivedEventsNumber 回退的事件数目
 	*/
-	void restore(int restoreTime);
+	void restore(int restoreTime,int deprivedEventsNumber);
 	
 	/** 
 	* <p>车位调度 </p>  

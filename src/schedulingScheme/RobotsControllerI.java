@@ -60,7 +60,7 @@ public class RobotsControllerI extends RobotsControlCenter {
 		
 		//初始化任务列表
 		this.createTaskList();
-		
+				
 		//调试用
 		int taskSelectionCount = 0;
 		while(!pullInTasks.isEmpty() || !pullOutTasks.isEmpty()){
@@ -72,8 +72,8 @@ public class RobotsControllerI extends RobotsControlCenter {
 			
 			System.out.println("***第" + taskSelectionCount+"选择完成。开始调度***");
 			
-			/*漏洞：需要重新考虑*/
-			dispatcher.restore(lastRST);
+
+			dispatcher.restore(lastRequestTime,undoEvents);
 			
 			//调试用
 			int taskCount = 0;
@@ -83,15 +83,25 @@ public class RobotsControllerI extends RobotsControlCenter {
 				if(tuple.r == null){
 					System.out.println("\n1.1. 原计划拒载，检查是否有可调动的机器人");
 					Robot robot = robots.peek();
+					//决定是否入库
 					if(robot.completementTime <= tuple.t.startTime + applications[tuple.t.carID].longestWatingTime){
-						int readyTime = Math.max(tuple.t.startTime, tuple.r.completementTime);
-						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, tuple.t.carID, readyTime); 
-						if(ds.success && readyTime +  ds.delay <= 
+						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, tuple.t.carID, tuple.t.startTime); 
+						
+						//就绪时间
+						int readyTime = Math.max(tuple.t.startTime + ds.delay, robot.completementTime);
+						
+						//等前面完成入库
+						if(readyTime < lastRealStartTimeIn)
+							readyTime = lastRealStartTimeIn;
+						
+						if(ds.success && readyTime <= 
 								tuple.t.startTime + applications[tuple.t.carID].longestWatingTime){
 							//调度出该机器人
 							tuple.r = robots.remove();
-							System.out.println("\n2.1"+robot.robotID+"号机器人可以完成该任务，车辆将进入" + ds.parkingSpaceID +"号停车位");
+
+							//System.out.println("\n2.1"+robot.robotID+"号机器人可以完成该任务，车辆将进入" + ds.parkingSpaceID +"号停车位");
 							pullIn(tuple, ds);
+							System.out.println("\n2.1. 车辆" + tuple.t.carID+"在"+tuple.t.realFinishTime+"时刻由机器人"+tuple.t.exeRobotID+"送入" +ds.parkingSpaceID+"号车位。");
 							continue;
 						}
 					}
@@ -102,36 +112,59 @@ public class RobotsControllerI extends RobotsControlCenter {
 				}else if(tuple.t.taskType == Task.PULL_IN){
 					System.out.println("\n1.2. 原计划入库，检查是否还有停车位");
 					//机器人响应时间
-					int readyTime = Math.max(tuple.t.startTime, tuple.r.completementTime);
 
-					DispatchState ds = dispatcher.parkingSpaceDispatch(applications, tuple.t.carID, readyTime); 
-					if(!ds.success|| readyTime +  ds.delay > tuple.t.startTime + applications[tuple.t.carID].longestWatingTime){
+					
+					DispatchState ds = dispatcher.parkingSpaceDispatch(applications, tuple.t.carID, tuple.t.startTime); 
+					int readyTime = Math.max(tuple.t.startTime + ds.delay, tuple.r.completementTime);
+					if(readyTime < lastRealStartTimeIn)
+						readyTime = lastRealStartTimeIn;
+					if(!ds.success|| readyTime  > tuple.t.startTime + applications[tuple.t.carID].longestWatingTime){
 						//没车位或赶不上，则放弃（以后可以改进）
+						
 						if(!ds.success)
 							System.out.println("\n2.1 没有车位，车辆" + tuple.t.carID+"放弃入库");
 						else
-							System.out.println("\n2.2 等待时间" + (readyTime +  ds.delay  - tuple.t.startTime)+"过长，超过" 
+							System.out.println("\n2.2 等待时间" + (readyTime   - tuple.t.startTime)+"过长，超过" 
 									+ applications[tuple.t.carID].longestWatingTime+"限制。车辆" + tuple.t.carID+"放弃停车。");
+						
 						applications[tuple.t.carID].refused = true;
+						
+						//机器人入队
+						robots.add(tuple.r);
 						continue;
 					}
-					System.out.println("\n2.3. 车辆" + tuple.t.carID+"将进入" +ds.parkingSpaceID+"号车位。");
 					//否则入库
 					pullIn(tuple, ds);
+					System.out.println("\n2.3. 车辆" + tuple.t.carID+"在"+tuple.t.realFinishTime+"时刻由机器人"+tuple.t.exeRobotID+"送入" +ds.parkingSpaceID+"号车位。");
 				}else{//出库
-					System.out.println("\n1.3 车辆" + tuple.t.carID + "将离开" + tuple.t.parkingSpaceID+"号车位。");
 					pullOut(tuple);
+					System.out.println("\n1.3 车辆"+ tuple.t.carID + "在"+tuple.t.realStartTime+"时刻由机器人"+tuple.t.exeRobotID +"送出"+ tuple.t.parkingSpaceID+"号车位。");
 				}
-			}				
-		}		
+			}
+			
+			undoEvents = 0;
+		}
+		
+		//恢复到最开始状态
+		dispatcher.restore(-1, -1);
+		robotsQ.clear();
+		taskQ1.clear();
+		taskQ2.clear();
+		undoEvents = 0;
+		lastRealStartTimeIn = 0;
+		lastRequestTime = 0;
+
 		return  utils.Calculator.calcT(applications, fPanishment, fWating);
 	}
 
 	private void pullOut(Tuple tuple){
 		//事件标记
-		tuple.t.realStartTime = Math.max(tuple.t.startTime, tuple.r.completementTime);
+		//实际开始时间应该是机器人实际从起点出发的时间加上从起点到车位所花的时间
+		tuple.t.realStartTime = Math.max(tuple.t.startTimeFromEntrance(), tuple.r.completementTime) 
+					+ router.hops(map.in, map.allSpaces.get(tuple.t.parkingSpaceID).location);
 		tuple.t.realFinishTime = tuple.t.realStartTime 
 				+ router.hops(map.out, map.allSpaces.get(tuple.t.parkingSpaceID).location);
+		tuple.t.exeRobotID = tuple.r.robotID;
 		
 		//机器人执行任务并返回起点
 		tuple.r.completementTime = tuple.t.realFinishTime
@@ -145,19 +178,22 @@ public class RobotsControllerI extends RobotsControlCenter {
 		dispatcher.event(tuple.t);
 		
 		//维护全局变量
-		lastRST = tuple.t.realStartTime;		
+		//lastRST = tuple.t.realStartTime;		
 	}
 	
 	private void pullIn(Tuple tuple,DispatchState ds){
 		//机器人响应时间
-		int readyTime = Math.max(tuple.t.startTime, tuple.r.completementTime);
+		//注意给响应时间设置了下界
+		int readyTime = Math.max(tuple.t.startTime + ds.delay, tuple.r.completementTime);
+		if(readyTime < lastRealStartTimeIn)
+			readyTime = lastRealStartTimeIn;
 		
 		//记录入库事件
 		applications[tuple.t.carID].refused = false;
 		applications[tuple.t.carID].task1 = tuple.t;
 		
 		//标记入库事件
-		tuple.t.realStartTime  = Math.max(readyTime + ds.delay , lastRealStartTimeIn); 
+		tuple.t.realStartTime  = readyTime; 
 		tuple.t.realFinishTime = tuple.t.realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
 		tuple.t.parkingSpaceID = ds.parkingSpaceID;
 		tuple.t.exeRobotID = tuple.r.robotID;
@@ -189,7 +225,8 @@ public class RobotsControllerI extends RobotsControlCenter {
 		
 		//维护全局变量
 		lastRealStartTimeIn =  tuple.t.realStartTime;
-		lastRST =  tuple.t.realStartTime;		
+		lastRequestTime = tuple.t.startTime;
+		//lastRST =  tuple.t.realStartTime;		
 	}
 	
 	private List<Robot> robotsQ = new LinkedList<Robot>();
@@ -209,33 +246,34 @@ public class RobotsControllerI extends RobotsControlCenter {
 			List<Tuple> result = new ArrayList<Tuple>();
 			Tuple tuple = new Tuple(pullOutTasks.remove(),robots.remove());
 			result.add(tuple);
-			System.out.println("1.1 没有入库任务，执行出库");
-			System.out.println("申请车辆"+tuple.t.carID +"离开车位"+tuple.t.parkingSpaceID
-					+"时间为"+tuple.t.realStartTime+"，执行机器人: "+tuple.r.robotID+"\n");
+			
+			
+			//System.out.println("1.1 没有入库任务，执行出库");
+			//System.out.println("申请车辆"+tuple.t.carID +"离开车位"+tuple.t.parkingSpaceID
+			//		+"，执行机器人: "+tuple.r.robotID+"\n");
 			return result;
 		}
 		
 		//先查看接下来的第一个入库任务
 		Task taskIn = this.pullInTasks.get(0);
 		
+		//记录当前实际可以执行的所有的出库任务，放到taskQ2中
+		//以后考虑加上一个小的超前量，以减少出库等待的时间		
+		while(!pullOutTasks.isEmpty() && pullOutTasks.peek().startTimeFromEntrance() <= taskIn.startTime + 50)
+			taskQ2.add(pullOutTasks.remove());
+		
 		//查看第一个空闲机器人（注意还未调出）
 		Robot robot = robots.peek();
 		DispatchState ds ;
 		
-		//记录当前实际可以执行的所有的出库任务，放到taskQ2中
-		//以后考虑加上一个小的超前量，以减少出库等待的时间
-		int realStartTime = Math.max(taskIn.startTime, robot.completementTime);
-		while(!pullOutTasks.isEmpty() && pullOutTasks.peek().startTimeFromEntrance() <= realStartTime)
-			taskQ2.add(pullOutTasks.remove());
+		//System.out.println("\n1.2 车辆"+taskIn.carID+"申请时间为"+taskIn.startTime
+		//		+"机器人"+robot.robotID+"最快响应"+",响应时间" + robot.completementTime);
 		
-		System.out.println("\n1.2 车辆"+taskIn.carID+"申请时间为"+taskIn.startTime
-				+"机器人"+robot.robotID+"最快响应"+",响应时间" + robot.completementTime);
-		
-		System.out.println("\n2. 尝试申请车位");
+		//System.out.println("\n2. 尝试申请车位");
 		if(!(ds = dispatcher.parkingSpaceDispatch(applications, 
-				taskIn.carID,realStartTime)).success){
+				taskIn.carID,taskIn.startTime)).success){
 			//如果没有车位可供分配
-			
+					
 			//调出第一个机器人
 			robot = robots.remove();
 			
@@ -248,21 +286,11 @@ public class RobotsControllerI extends RobotsControlCenter {
 				taskOut = pullOutTasks.remove();
 			}
 			
-			//记录真实的开始时间和完成时间
-			
-			//不能提前移动汽车
 			/*
-			taskOut.realStartTime 
-				= Math.max(robot.completementTime + router.hops(map.in,
-						map.allSpaces.get(taskOut.parkingSpaceID).location), taskOut.startTime);
-			taskOut.realFinishTime = taskOut.realStartTime  + 
-					router.hops(map.allSpaces.get(taskOut.parkingSpaceID).location, map.out);
-			taskOut.exeRobotID = robot.robotID;
-			*/
 			System.out.println("2.1. 车位分配不成功，执行一个出库任务...");
 			System.out.println("申请车辆"+taskOut.carID +"离开车位"+taskOut.parkingSpaceID
 					+"时间为"+taskOut.realStartTime+"，执行机器人: "+robot.robotID+"\n");
-
+			 */
 			Tuple pullOut = new Tuple(taskOut,robot);
 			List<Tuple> result = new ArrayList<Tuple>();
 			result.add(pullOut);
@@ -271,22 +299,27 @@ public class RobotsControllerI extends RobotsControlCenter {
 		}else if(robot.completementTime >
 			taskIn.startTime + this.applications[taskIn.carID].longestWatingTime){
 			//	如果分配了车位，但机器人赶不上，拒载
+			/*
 			System.out.println("2.2. 机器人实际上赶不上该入库任务，机器人完成时间"
 					+robot.completementTime +"车辆申请入库时间"+taskIn.startTime
 					+"，最长等待啥时间" +  this.applications[taskIn.carID].longestWatingTime);
-			
+			*/
 			List<Tuple> result = new ArrayList<Tuple>();
 			result.add(new Tuple(taskIn,null));
 			return result;
 		}else{
-			System.out.println("2.3. 机器人有希望完成该入库任务");
+			//System.out.println("2.3. 机器人有希望完成该入库任务");
 			//	如果分配了车位，并且机器人可以赶上
+			int readyTime = Math.max(taskIn.startTime + ds.delay, robot.completementTime);
+			if(readyTime < lastRealStartTimeIn)
+				readyTime = lastRealStartTimeIn;
 			
+
 			//定义一个时间周期[takeIn,startTime,timeBound]
 			//timeBound是第一个机器人在完成入库任务后返回
 			//入口的时刻
 			int timeBound = router.hops(map.allSpaces.get(ds.parkingSpaceID).location, 
-					map.in) * 2 + ds.delay + realStartTime  ;
+					map.in) * 2 + readyTime;
 			
 			//将时间周期内的入库任务放到taskQ1
 			//一次执行的入库任务数目不会超过总的机器人数目
@@ -297,8 +330,8 @@ public class RobotsControllerI extends RobotsControlCenter {
 				taskQ1.add(taskIn);
 			}
 			
-			System.out.println("\n3. 计算机器人活动周期：["+realStartTime+" , " +timeBound+"]");
-			System.out.print("在这段周期内入库任务数目："+ taskQ1.size());
+			//System.out.println("\n3. 计算机器人活动周期：["+readyTime+" , " +timeBound+"]");
+			//System.out.print("在这段周期内入库任务数目："+ taskQ1.size());
 			
 			List<Tuple> result = new ArrayList<Tuple>();
 			
@@ -350,7 +383,7 @@ public class RobotsControllerI extends RobotsControlCenter {
 						robotsQ.add(exeRobot);	
 						refuse = false;
 						
-						//暂定
+						//暂定可以入库
 						result.add(new Tuple(taskQ1.get(taskQ1Index),exeRobot));
 					}
 				}
@@ -368,18 +401,18 @@ public class RobotsControllerI extends RobotsControlCenter {
 			 *注意前面限定了选择的入库任务不会比机器人数目多
 			 *另一方面，每一个没有拒载的入库任务都意味着有一个机器人可以执行
 			 */
-			System.out.println("\n4. 调动的机器人数目为 " + robotsQ.size()+" ，"+"目前拒载的任务数目"+refusalCount);
+			//System.out.println("\n4. 调动的机器人数目为 " + robotsQ.size()+" ，"+"目前拒载的任务数目"+refusalCount);
 			int robotsOffset = robotsQ.size() - taskQ1.size() + refusalCount;
 			if(robotsOffset == 0){
 				//如果每个机器人都有入库任务
-				System.out.println("\n5.1 调动出来的机器人都用于入库任务了。");
+				//System.out.println("\n5.1 调动出来的机器人都用于入库任务了。");
 				
 				/*清理工作*/
 				
 				//入库任务都已经安排好了（包括拒载）
 				taskQ1.clear();
 				
-				System.out.println("\n6. 把剩余的未完成的"+ taskQ2.size()+"个在缓冲队列的出库任务重新入总队。");
+				//System.out.println("\n6. 把剩余的未完成的"+ taskQ2.size()+"个在缓冲队列的出库任务重新入总队。");
 				
 				//没有选上的出库任务需重新排队
 				while(!taskQ2.isEmpty())
@@ -400,11 +433,12 @@ public class RobotsControllerI extends RobotsControlCenter {
 				//分配出库任务
 				solution.add(taskQ2.remove(0));
 			}
+			/*
 			System.out.println("\n5.2 为富余的"+robotsOffset+
 					"个机器人分配了" + (solution.size() -taskQ1.size())+"个任务");
 			
-			System.out.println("\n6. 禁忌搜索");
-			
+			System.out.println("\n6. ***禁忌搜索***");
+			*/
 			//禁忌搜索
 			TabuSearch ts = new TabuSearch(solution,robotsQ);			
 			List<Tuple> taskSelecting = ts.solve();
@@ -414,9 +448,10 @@ public class RobotsControllerI extends RobotsControlCenter {
 			for(Tuple tu : taskSelecting)
 				if(tu.r != null)
 					workingRobotsNumber ++;
+			/*
 			System.out.println("\n7. 在调出的"+robotsQ.size()+"个机器人中，"
 					+workingRobotsNumber+"个有任务。（如果有剩余的机器人将重新入队）");
-						
+					*/	
 			//将队列后面没有分配任务的机器人重新放回堆中（不用改变）
 			while(robotsQ.size() > workingRobotsNumber)
 				robots.add(robotsQ.remove(robotsQ.size() - 1));
@@ -425,7 +460,7 @@ public class RobotsControllerI extends RobotsControlCenter {
 			//在这里可以解散队列了
 			robotsQ.clear();
 			
-			System.out.println("\n8. 把剩余的未完成的"+ taskQ2.size()+"个在缓冲队列的出库任务重新入总队。");
+			//sSystem.out.println("\n8. 把剩余的未完成的"+ taskQ2.size()+"个在缓冲队列的出库任务重新入总队。");
 			
 			//入库任务都已经安排好了（包括拒载）
 			taskQ1.clear();
@@ -439,15 +474,17 @@ public class RobotsControllerI extends RobotsControlCenter {
 			
 	}
 	
+	private int lastRequestTime;
+	
 	/** 
 	* @Fields lastRealStartTimeIn : TODO(上次执行入库任务时从入口出发的时间，控制先申请先处理) 
 	*/ 
 	private int lastRealStartTimeIn = 0;
-	
+		
 	/** 
-	* @Fields lastRST : TODO(上次执行任务（入库或出库）的时间点，在断点执行时用于恢复现场) 
+	* @Fields undoEvents : TODO(回退到几个事件之前) 
 	*/ 
-	private int lastRST = 0;
+	private int undoEvents = 0;
 	
 	public class TabuSearch{
 		private List<Task> solution;
@@ -469,29 +506,42 @@ public class RobotsControllerI extends RobotsControlCenter {
 			this.robots = robots;
 			
 			tabuTable = new int[initSolution.size()][initSolution.size() + 1];
+			//localLastRequestTime = lastRequestTime;
 			localLastRealStartTimeIn = lastRealStartTimeIn;
 		}
 		
 		public List<Tuple> solve(){
-			//iterationCount = 0;
-			//bestCost = evaluate(solution);
+			iterationCount = 0;
+			bestCost = evaluate(solution);
 			bestSolution = new ArrayList<Task>(solution);
 			
+			System.out.println("初始解为");
+			this.printSolution(bestSolution, bestCost);
 			//调试中
-			
-			/*
-			while(!stop()){
-				Point neighborLoc = null ;
-				int bestNCost = bestNeighbor(neighborLoc);
-				Point finalNeighborLoc = null;
-				int cost = aspiration(bestNCost,neighborLoc,finalNeighborLoc);
 				
+			while(!stop()){//没有到终止条件
+
+
+				Point neighborLoc = bestNeighbor();
+				List<Task> solutionCopy = new LinkedList<Task>(solution);
+				int bestUntabuCost  = 
+						evaluate(neighbor(solutionCopy,neighborLoc.x,neighborLoc.y));
+								
+				Point finalNeighborLoc= aspiration(bestUntabuCost,neighborLoc);
+							
+				solutionCopy = new LinkedList<Task>(solution);
+				int finalCost = 
+						evaluate(neighbor(solutionCopy,finalNeighborLoc.x,finalNeighborLoc.y));
+									
 				solution = neighbor(solution,finalNeighborLoc.x,finalNeighborLoc.y);
 				
-				if(cost < bestCost ){
-					bestCost = cost;
+				if(finalCost < bestCost ){
+					bestCost = finalCost;
 					bestSolution = new ArrayList<Task>(solution);
-				}
+					bestSolutionUnchangedIterations = 0;
+				}else
+					bestSolutionUnchangedIterations++;
+				
 				for(int i = 0;i < tabuTable.length;i ++)
 					for(int j = 0;j < tabuTable[0].length;j ++)
 						if(tabuTable[i][j] > 0)
@@ -499,8 +549,11 @@ public class RobotsControllerI extends RobotsControlCenter {
 				
 				tabuTable[finalNeighborLoc.x][finalNeighborLoc.y] = 5;
 				iterationCount++;
-			}*/
-					
+
+				System.out.println("第" + iterationCount+"次，得到的解为：");
+				this.printSolution(solution, finalCost);			
+			}
+			//System.out.println("***搜索结束***");		
 			return robotsMatching(bestSolution);
 		}
 		
@@ -508,8 +561,9 @@ public class RobotsControllerI extends RobotsControlCenter {
 			int cost = 0;
 			int taskIndex = 0,robotIndex = 0; 
 			
-			dispatcher.restore(lastRST);
+			dispatcher.restore(lastRequestTime,undoEvents);
 			localLastRealStartTimeIn = lastRealStartTimeIn;
+			undoEvents = 0;
 			
 			while(taskIndex < solution.size()){
 				//按顺序处理每个任务
@@ -521,31 +575,32 @@ public class RobotsControllerI extends RobotsControlCenter {
 						//机器人赶不上
 						cost += fPanishment;
 					}else{
-						int realStartTime =
-								Math.max(robot.completementTime,task.startTime);
-						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, task.carID, realStartTime);
-						if(!ds.success || realStartTime+ds.delay > task.startTime + applications[task.carID].longestWatingTime)
+	
+						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, task.carID, task.startTime);
+						int readyTime = Math.max(task.startTime + ds.delay, robot.completementTime);
+						if(readyTime < localLastRealStartTimeIn)
+							readyTime = localLastRealStartTimeIn;						
+						if(!ds.success || readyTime > task.startTime + applications[task.carID].longestWatingTime)
 							//因为等待车位而延迟，导致机器人赶不上任务
 							cost += fPanishment;
 						else{//机器人赶得上
-							
-							//注意先申请先处理
-							realStartTime = Math.max(realStartTime+ds.delay, localLastRealStartTimeIn);
-							
+														
 							//记录
-							task.realStartTime = realStartTime;
+							task.realStartTime = readyTime;
 							task.realFinishTime = task.realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
 							task.parkingSpaceID = ds.parkingSpaceID;
 							task.exeRobotID = robot.robotID;							
 							
-							if(realStartTime > task.startTime)
-								cost += fWating * (realStartTime - task.startTime);
+							if(task.realStartTime > task.startTime)
+								cost += fWating * (task.realStartTime - task.startTime);
 							robotIndex++;
 							
 							//通知
 							dispatcher.event(task);
 							
-							localLastRealStartTimeIn = realStartTime;
+							//记录
+							localLastRealStartTimeIn = task.realStartTime;
+							undoEvents++;
 						}
 					}			
 				}else if(task.taskType == Task.PULL_OUT){//出库任务
@@ -561,6 +616,9 @@ public class RobotsControllerI extends RobotsControlCenter {
 					
 					//通知
 					dispatcher.event(task);
+					
+					//记录
+					undoEvents++;					
 				}else
 					throw new IllegalStateException("只考虑入库和出库任务!");
 				taskIndex++;
@@ -575,46 +633,53 @@ public class RobotsControllerI extends RobotsControlCenter {
 			//int cost = 0;
 			int taskIndex = 0,robotIndex = 0; 
 			
-			dispatcher.restore(lastRST);
+			//回到搜索前状态
+			dispatcher.restore(lastRequestTime,undoEvents);
+			
+			//开始入库时间下界
 			localLastRealStartTimeIn = lastRealStartTimeIn;
+			
+			//重置
+			undoEvents = 0;
 			
 			while(taskIndex < solution.size()){
 				//按顺序处理每个任务
 				Task task = solution.get(taskIndex);
 				
-				//
 				Robot robot = robots.get(robotIndex);
 				if(task.taskType == Task.PULL_IN){//入库任务
 					if(robot.completementTime > task.startTime 
 						+ applications[task.carID].longestWatingTime){
 						//机器人赶不上
-						//cost += fPanishment;
 						robotsMatching.add(new Tuple(task,null));
 					}else{
 						//一定是在申请之后开始的
-						int realStartTime =
-								Math.max(robot.completementTime,task.startTime);
-						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, task.carID, realStartTime);
-						if(!ds.success || realStartTime+ds.delay > task.startTime + applications[task.carID].longestWatingTime){
+
+						DispatchState ds = dispatcher.parkingSpaceDispatch(applications, task.carID, task.startTime);
+						int readyTime = Math.max(task.startTime + ds.delay, robot.completementTime);
+						if(readyTime < localLastRealStartTimeIn)
+							readyTime = localLastRealStartTimeIn;
+						
+						if(!ds.success || readyTime> task.startTime + applications[task.carID].longestWatingTime){
 							//因为没有车位，或者等待车位而发生延迟，导致机器人赶不上任务
-							//cost += fPanishment;
 							robotsMatching.add(new Tuple(task,null));						
 						}else{//机器人赶得上
-							
-							//注意先申请先处理
-							realStartTime = Math.max(realStartTime+ds.delay, localLastRealStartTimeIn);
-							
-							task.realStartTime = realStartTime;
+														
+							task.realStartTime = readyTime;
 							task.realFinishTime =
-									realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
+									task.realStartTime + router.hops(map.in, map.allSpaces.get(ds.parkingSpaceID).location);
 							task.parkingSpaceID = ds.parkingSpaceID;
-							task.exeRobotID = robot.robotID;
+							//task.exeRobotID = robot.robotID;
 						
+							//通知
 							dispatcher.event(task);
 							
 							robotsMatching.add(new Tuple(task,robot));
 							robotIndex++;
-							localLastRealStartTimeIn = realStartTime;
+							
+							//记录
+							localLastRealStartTimeIn = task.realStartTime;
+							undoEvents ++;
 						}
 					}			
 				}else if(task.taskType == Task.PULL_OUT){//出库任务
@@ -625,15 +690,17 @@ public class RobotsControllerI extends RobotsControlCenter {
 					task.realStartTime = realStartTime;
 					task.realFinishTime = 
 							realStartTime + router.hops(map.allSpaces.get(task.parkingSpaceID).location, map.out);
+									
+					//task.exeRobotID = robot.robotID;
+				
+					robotsMatching.add(new Tuple(task,robot));
+					robotIndex++;
 					
-					//停车场编号已知
-					
-					task.exeRobotID = robot.robotID;
 					//通知
 					dispatcher.event(task);
 					
-					robotsMatching.add(new Tuple(task,robot));
-					robotIndex++;																			
+					//记录
+					undoEvents ++;
 				}else
 					throw new IllegalStateException("只考虑入库和出库任务!");
 				taskIndex++;
@@ -642,15 +709,24 @@ public class RobotsControllerI extends RobotsControlCenter {
 			return robotsMatching;
 		}
 		
+		private int bestSolutionUnchangedIterations = 0;
 		public boolean stop(){
-			return iterationCount == 1000;
+			//return bestSolutionUnchangedIterations >= 1;
+			return iterationCount >= 5;
 		}
 		
-		public int bestNeighbor(Point neighborLoc){
-			List<Task> neighbor = new LinkedList<Task>();	
-			for(Task t : solution)
-				neighbor.add(t);
-			neighborLoc = new Point(-1,-1);
+		/** 
+		* <p>找到代价最小的邻解， </p> 
+		* <p>禁忌的邻解不在查找范围之内。 </p> 
+		* @param neighborLoc 存放位置信息
+		* @return 最小的邻解位置
+		* @throws IllegalStateException 如果不存在邻解
+		*/
+		public Point bestNeighbor(){
+			//复制
+			List<Task> neighbor = new LinkedList<Task>(solution);	
+
+			Point  neighborLoc = new Point(-1,-1);
 			int bestNeighborCost = Integer.MAX_VALUE;
 			
 			int i = getNextPullOutTask( 0,solution);
@@ -658,8 +734,10 @@ public class RobotsControllerI extends RobotsControlCenter {
 				throw new IllegalStateException("没有邻居");
 			
 			int currentCost;
-			while(i > 0){
-				for(int j = 0;j < tabuTable.length;j ++)
+			while(i >= 0){//还有出库任务
+				for(int j = 0;j < tabuTable[0].length;j ++)
+					//针对所有可能的插入位置
+					
 					if(tabuTable[i][j] == 0 && i != j){
 						neighbor = neighbor(neighbor,i,j);
 						if((currentCost = evaluate(neighbor)) < bestNeighborCost){
@@ -673,13 +751,22 @@ public class RobotsControllerI extends RobotsControlCenter {
 						else
 							neighbor = neighbor(neighbor,j,i+1);
 					}
-				i = getNextPullOutTask( 0,solution);
+				i = getNextPullOutTask( i + 1,solution);
 			}
-			return bestNeighborCost;
+			return neighborLoc;
 		}
 		
-		public int aspiration(int bestNeighborCost,Point bestUntabuNLoc, Point finalBestNeighbor){
-			finalBestNeighbor = new Point(bestUntabuNLoc.x,bestUntabuNLoc.y);
+		/** 
+		* <p>吸引准则 </p> 
+		* <p>如果当前某个禁忌邻解要优于到目前为止的最好的解（包括先前找到的最优非禁忌邻解），该禁忌解将被采纳，返回该解代价。否则，仍返回刚才找到的最优非禁忌邻解代价。 </p> 
+		* @param bestNeighborCost 当前最优的非禁忌邻解的代价
+		* @param bestUntabuNLoc 当前最优的非禁忌邻解的位置
+		* @param finalBestNeighbor 输入一个位置引用，以存放最终获取的最优解的位置
+		* @return 最终最优邻解代价
+		* @throws IllegalStateException 没有邻解
+		*/
+		public Point aspiration(int bestNeighborCost,Point bestUntabuNLoc){
+			Point finalBestNeighbor = new Point(bestUntabuNLoc.x,bestUntabuNLoc.y);
 			List<Task> neighbor = new LinkedList<Task>();	
 			for(Task t : solution)
 				neighbor.add(t);
@@ -689,8 +776,8 @@ public class RobotsControllerI extends RobotsControlCenter {
 				throw new IllegalStateException("没有邻居");
 			int bestCost = Math.min(bestNeighborCost, this.bestCost);	
 			int currentCost;
-			while(i > 0){
-				for(int j = 0;j < tabuTable.length;j ++)
+			while(i >= 0){
+				for(int j = 0;j < tabuTable[0].length;j ++)
 					if(tabuTable[i][j] > 0 && i != j){
 						neighbor = neighbor(neighbor,i,j);
 						if((currentCost = evaluate(neighbor)) < bestCost){
@@ -704,15 +791,19 @@ public class RobotsControllerI extends RobotsControlCenter {
 						else
 							neighbor = neighbor(neighbor,j,i+1);
 					}
-				i = getNextPullOutTask( 0,solution);
+				i = getNextPullOutTask( i + 1,solution);
 			}
 			
-			if(bestUntabuNLoc.equals(finalBestNeighbor))
-				return bestNeighborCost;
-			else
-				return bestCost;
+			return finalBestNeighbor;
 		}
 		
+		/** 
+		* <p>从给定位置（包括）往后查找，返回第一个出库任务的下标。如果没有或给定下标越界返回-1 </p> 
+		* <p>Description: </p> 
+		* @param start 给定起点
+		* @param solution 要查找的解
+		* @return 
+		*/
 		private int getNextPullOutTask(int start,List<Task> solution){
 			if(start < 0 || start >= solution.size())
 				return -1;
@@ -743,6 +834,12 @@ public class RobotsControllerI extends RobotsControlCenter {
 				solution.remove(i+1);
 		
 			return solution;
+		}
+		public void printSolution(List<Task> solution,int cost){
+			System.out.print("cost:" + cost);
+			for(Task t: solution)
+				System.out.print("<car"+t.carID+" "+(t.taskType==Task.PULL_IN?"in":"out")+"> ");
+			System.out.println();
 		}
 	}
 	

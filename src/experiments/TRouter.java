@@ -8,6 +8,8 @@
 */
 package experiments;
 
+import java.util.Scanner;
+
 import models.Map;
 import models.Router;
 import utils.Initiation;
@@ -30,7 +32,7 @@ public class TRouter {
 		Initiation data = new Initiation();	
 		
 		//输入到控制台
-		data.init();
+		data.init(new Scanner(System.in));
 		
 		//创建地图
 		Map map = new Map(data.map, data.routingIn, data.routingOut);

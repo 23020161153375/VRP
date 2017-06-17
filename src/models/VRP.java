@@ -40,11 +40,11 @@ public class VRP {
 	* @param pot
 	* @param mass 
 	*/
-	public VRP(int id,int rt,int lwt,int pot,int mass){
+	public VRP(int id,int rt,int pot,int lwt,int mass){
 		carID = id;
 		requestTime = rt;
-		longestWatingTime = lwt;
 		pullOutTime = pot;
+		longestWatingTime = lwt;		
 		carMass = mass;
 	}
 	

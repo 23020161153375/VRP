@@ -8,6 +8,8 @@
 */
 package experiments;
 
+import java.util.Scanner;
+
 import models.Map;
 
 import models.Router;
@@ -36,7 +38,7 @@ public class TControllerI {
 		Initiation data = new Initiation();
 		
 		System.out.println("***请输入数据***");
-		data.init();
+		data.init(new Scanner(System.in));
 		
 		System.out.println("***测试开始***");
 		//创建地图
@@ -54,7 +56,7 @@ public class TControllerI {
 
 		Scheduling controller = new RobotsControllerI(map,router,parkingLotDispatcher,data.fEnergy,data.fPanishment,data.fRobots,data.fWaiting,data.applications);
 		
-		int nRobots = 3;
+		int nRobots = 30;
 		
 		System.out.println("使用机器人数目为： " + nRobots);
 		
@@ -63,7 +65,7 @@ public class TControllerI {
 		
 		System.out.println("***结果***");
 		System.out.println("经计算，最后的等待代价与拒载代价之和为：" +jointCost );
-		System.out.println("机器人代价加上等待代价嘉盛拒载代价之和为："+ (jointCost +data.fRobots * nRobots));
+		System.out.println("机器人代价加上等待代价加上拒载代价之和为："+ (jointCost +data.fRobots * nRobots));
 		System.out.println("所有代价之和为：" +  (jointCost +data.fRobots * nRobots + Calculator.calcW(data.applications, data.fEnergy, map, router)));
 	}
 

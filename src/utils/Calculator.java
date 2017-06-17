@@ -20,6 +20,44 @@ import routing.Routing;
 */
 public class Calculator {
 
+	private Initiation data;
+	
+	public Calculator(Initiation data){
+		this.data = data;
+	}
+	public int nRefused(){
+		int refusedNumber = 0;
+		for(int i = 0;i < data.applications.length;i ++)
+			if(data.applications[i].refused)
+				refusedNumber++;
+		return refusedNumber;
+	}
+	
+	public int watingTimeIn(){
+		int totalWatingIn = 0;
+		for(int i = 0;i < data.applications.length;i ++){
+			if(!data.applications[i].refused){
+				int realStart = data.applications[i].task1.realStartTime;
+				int start = data.applications[i].task1.startTime;
+				if(realStart > start)
+					totalWatingIn += realStart- start;
+			}
+		}
+		return totalWatingIn;
+	}
+	
+	public int watingTimeOut(){
+		int totalWatingOut = 0;
+		for(int i = 0;i < data.applications.length;i ++){
+			if(!data.applications[i].refused){
+				int realStart = data.applications[i].task2.realStartTime;
+				int start = data.applications[i].task2.startTime;
+				if(realStart > start)
+					totalWatingOut += realStart- start;
+			}
+		}
+		return totalWatingOut;
+	}
 	public static int calcT(VRP[] applications,int fPanishment,int fWating){
 		int T1 = 0,T2 = 0;
 		for(int i = 0;i < applications.length;i ++){
@@ -42,9 +80,10 @@ public class Calculator {
 		int W = 0;
 		for(int i = 0;i < applications.length;i ++){
 			if(!applications[i].refused){
-
-				W += fEnergy * router.hops(map.in, map.allSpaces.get(applications[i].task1.parkingSpaceID).location) ;
-				W += fEnergy * router.hops( map.allSpaces.get(applications[i].task1.parkingSpaceID).location, map.out);
+				
+				//³µÖØ
+				W += fEnergy*applications[i].carMass * router.hops(map.in, map.allSpaces.get(applications[i].task1.parkingSpaceID).location) ;
+				W += fEnergy *applications[i].carMass *router.hops(map.allSpaces.get(applications[i].task1.parkingSpaceID).location, map.out);
 			}
 		}
 		

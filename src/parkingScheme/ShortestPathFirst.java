@@ -36,18 +36,6 @@ public class ShortestPathFirst extends ParkingLotManager {
 	}
 
 
-	/** (non-Javadoc)
-	 * @see parkingScheme.SpaceDispatcher#restore(int)
-	 */
-	@Override
-	public void restore(int restoreTime) {
-		// TODO Auto-generated method stub
-		if(restoreTime > this.time || restoreTime < 0)
-			throw new IllegalStateException("只能回到当初的某个时间,范围在0到" + this.time );
-		else
-			this.stateChangeAnticlockwise(restoreTime);
-	}
-
 
 	/** (non-Javadoc)
 	 * @see parkingScheme.SpaceDispatcher#parkingSpaceDispatch(models.VRP[], int)

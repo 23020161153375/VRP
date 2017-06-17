@@ -60,7 +60,6 @@ public abstract class RobotsControlCenter implements Scheduling {
 	protected HeapMin<Task,Integer> pullOutTasks;
 	
 	protected HeapMin<Robot,Integer> robots;
-	//protected int time;
 	
 	/** 
 	* <p>初始化机器人</p> 
@@ -86,11 +85,4 @@ public abstract class RobotsControlCenter implements Scheduling {
 			pullInTasks.add(pullIn);
 		}
 	}
-	/*
-	protected void completeTask(Robot robot,Task task){
-		robot.completementTime = task.realFinishTime;
-		robot.location = task.taskType == Task.PULL_IN ?
-				map.allSpaces.get(task.parkingSpaceID).location: map.out;
-	}*/
-	
 }

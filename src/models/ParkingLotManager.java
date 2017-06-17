@@ -25,7 +25,7 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	public Routing router;
 
 	public Map parkingLot;
-	
+		
 	protected ParkingLotManager(Map parkingLot, Routing router){
 
 		this.parkingLot = parkingLot;
@@ -33,14 +33,21 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 		
 		//emptySpaces = new HeapMin<ParkingSpace,Integer>(parkingLot.allSpaces);
 		time = 0;
+		globalEventsOn = new java.util.ArrayList<Integer>();
 	}
 	
 	protected int time;
 	
 	//protected HeapMin<ParkingSpace,Integer> emptySpaces;
 	
+	/** 
+	* @Fields globalEventsOn : TODO(记录调度的顺序，但不一定是按时间序的,整数代表事件发生的位置，也就是停车位的编号) 
+	*/ 
+	protected List<Integer> globalEventsOn;
+	
 	public void event(Task task){	
 		parkingLot.allSpaces.get(task.parkingSpaceID).eventsOn.add(task);
+		globalEventsOn.add(task.parkingSpaceID);
 	}
 	/*	
 	protected ParkingSpace removeAEmptySpace(int spaceID){
@@ -91,7 +98,7 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 		this.time = time;
 		
 		//调试用
-		printCurrentStateOfParkingLot();
+		//printCurrentStateOfParkingLot();
 	}
 	
 	/** 
@@ -99,7 +106,7 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	* <p>调试用</p>  
 	*/
 	protected void printCurrentStateOfParkingLot(){
-		System.out.println("当前时间：" + time+"分配前停车位状态（Empty/Busy）");
+		System.out.println("当前时间 " + time+",全局事件 "+globalEventsOn.size()+"件，分配前停车位状态（Empty/Busy）");
 		for(int i = 0;i < parkingLot.allSpaces.size();i ++){
 			System.out.printf("%3d",i);			
 		}
@@ -114,13 +121,21 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 	 * @see parkingScheme.SpaceDispatcher#restore(int)
 	 */
 	@Override
-	public void restore(int restoreTime) {
+	public void restore(int restoreTime,int eventsNumber) {
 		// TODO Auto-generated method stub
-		if(restoreTime != time)
+		if(restoreTime == -1 && eventsNumber == -1){
+			//特殊指令，恢复到初始状态
+			restoreTime = 0;
+			eventsNumber = globalEventsOn.size();
+		}
+		
+		undoEvents(eventsNumber);
+		if(restoreTime != time){//时间相等不用调整
 			stateChangeAnticlockwise(restoreTime);
+		}
 		
 		//调试用
-		printCurrentStateOfParkingLot();
+		//printCurrentStateOfParkingLot();
 	}
 	
 	protected void stateChangeAnticlockwise(int time){
@@ -133,6 +148,10 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 			List<Task> events = parkingLot.allSpaces.get(i).eventsOn;
 			int lastEventIndex= parkingLot.allSpaces.get(i).lastEventIndex;
 			int j = lastEventIndex;
+			
+			//有的事件可能在回退时被移除了
+			while(j >= events.size()) j--;
+			
 			while(j >= 0){
 				Task event = events.get(j);
 				if(event.taskType == Task.PULL_IN && event.realFinishTime > time)
@@ -159,11 +178,21 @@ public abstract class ParkingLotManager implements SpaceDispatcher{
 			parkingLot.allSpaces.get(i).lastEventIndex = j;
 			
 			//释放最后一个完成事件后面的所有事件
-			while(events.size() > j+1)
-				events.remove(events.size() - 1);
+			//while(events.size() > j+1)
+				//events.remove(events.size() - 1);
 		}
 		//记录当前系统时间
 		this.time = time;	
+	}
+	
+	protected void undoEvents(int number){
+		while(number-- > 0){
+			int spaceID = globalEventsOn.
+					remove(globalEventsOn.size() - 1);
+			parkingLot.allSpaces.get(spaceID).eventsOn
+				.remove(parkingLot.allSpaces.get(spaceID)
+								.eventsOn.size() - 1);
+		}		
 	}
 	
 }

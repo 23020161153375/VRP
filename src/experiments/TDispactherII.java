@@ -8,6 +8,8 @@
 */
 package experiments;
 
+import java.util.Scanner;
+
 import models.DispatchState;
 import models.Map;
 import models.Router;
@@ -34,7 +36,7 @@ public class TDispactherII {
 		Initiation data = new Initiation();
 		
 		System.out.println("***请输入数据***");
-		data.init();
+		data.init(new Scanner(System.in));
 		
 		System.out.println("***测试开始***");
 		//创建地图
@@ -91,12 +93,11 @@ public class TDispactherII {
 		
 		System.out.println("***测试恢复功能***");
 		System.out.println("回到第二个入库任务刚申请前的状态（也就是与前面显示的第二条停车场状态相同）");
-		parkingLotDispatcher.restore(data.applications[1].requestTime);
+		parkingLotDispatcher.restore(data.applications[1].requestTime,data.applications.length - 2 + 1);
 
 		
 		System.out.println("回到初始状态(所有的车位为空)");
-		parkingLotDispatcher.restore(0);
-
+		parkingLotDispatcher.restore(0,1);
 	}
 
 }

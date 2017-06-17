@@ -40,8 +40,49 @@ public class Router implements Routing {
 	@Override
 	public ArrayList<Point> routing(Point start, Point end) {
 		// TODO Auto-generated method stub
-		//if()
-		return null;
+		ArrayList<Point>result;
+		if(start.equals(end)){
+			result =  new ArrayList<Point>();
+			result.add(start);
+			return result;
+		}
+		
+		boolean startI = parkingLot.search(start) == Map.I,
+				startE = parkingLot.search(start) == Map.E,
+				startP = parkingLot.search(start) >= 0,
+				endI = parkingLot.search(end) == Map.I,
+				endE = parkingLot.search(end) == Map.E,
+				endP = parkingLot.search(end) >= 0;
+				if(startI && endE){//从起点到终点的路径
+					return StaticRouting.getRoute(start.x, start.y, end.x, end.y, routingI);
+				}else if(startE && endI){
+					return StaticRouting.getRoute(end.x, end.y, start.x, start.y, routingE);
+				}else if(startI && endP){
+					Point endPInlet = parkingLot.allSpaces.get(parkingLot.search(end)).inlet;
+					result = StaticRouting.getRoute( start.x, start.y,endPInlet.x,endPInlet.y, routingI) ;
+					result.add(end);
+				}else if(endE && startP){
+					Point startPInlet = parkingLot.allSpaces.get(parkingLot.search(start)).inlet;
+					
+					//从终点到车位入口的路由
+					result = StaticRouting.getRoute(end.x, end.y, startPInlet.x, startPInlet.y,  routingE);
+					
+					//现在是从终点到车位的路由
+					result.add(start);
+					
+					//倒置
+					int size = result.size();
+					int mid = (size -1) / 2;
+					
+					for(int i = 0;i< size;i ++)
+						if(i <= mid){
+							Point temp = result.get(i);
+							result.set(i, result.get(size - 1 - i));
+							result.set(size - 1 - i, temp);
+						}						
+				}else//暂不支持PP之间及起、终点带X的路由
+					throw new UnsupportedOperationException();		
+			return result;
 	}
 
 	/** 

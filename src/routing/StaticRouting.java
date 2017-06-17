@@ -106,6 +106,7 @@ public class StaticRouting {
     		Point prior =  priorPosition(curx,cury,routingTable[curx][cury]);
     		rout.add(0, prior);
     		curx = prior.getX();
+    		cury = prior.getY();
     	}
     	
     	if(curx != x1 || cury != y1)

@@ -121,7 +121,7 @@ public class Task implements Comparable<Task>, HeapElement<Integer> {
 		return this.startTimeFromEntrance;
 	}
 	
-	/** (non-Javadoc)
+	/**使用从起点出发去接车的最早时间作为键值
 	 * @see dataStructure.other.HeapElement#updateKey(java.lang.Object)
 	 */
 	@Override

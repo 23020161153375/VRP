@@ -51,8 +51,8 @@ public class DispatcherII extends ParkingLotManager {
 			throw new IllegalStateException("先申请入库的先处理。");
 		else if(readyTime > this.time)//时钟调整
 			stateChangeClockwise(readyTime);
-		else
-			this.printCurrentStateOfParkingLot();
+		//else
+			//this.printCurrentStateOfParkingLot();
 		
 		//将当前距离最短的一个可行的车位调度出来
 		//int fessibleSpace = -1;
